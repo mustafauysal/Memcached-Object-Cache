@@ -129,8 +129,7 @@ class WP_Object_Cache {
 		$result = $mc->add($key, $data, false, $expire);
 
 		if ( false !== $result ) {
-			@ ++$this->stats['add'];
-			$this->group_ops[$group][] = "add $id";
+			$this->maybe_collect_stats( 'add', $group, $id );
 			$this->cache[$key] = $data;
 		}
 
@@ -185,8 +184,7 @@ class WP_Object_Cache {
 
 		$result = $mc->delete($key);
 
-		@ ++$this->stats['delete'];
-		$this->group_ops[$group][] = "delete $id";
+		$this->maybe_collect_stats( 'delete', $group, $id );
 
 		if ( false !== $result )
 			unset($this->cache[$key]);
@@ -234,8 +232,7 @@ class WP_Object_Cache {
 			$this->cache[$key] = $value;
 		}
 
-		@ ++$this->stats['get'];
-		$this->group_ops[$group][] = "get $id";
+		$this->maybe_collect_stats( 'get', $group, $id );
 
 		if ( 'checkthedatabaseplease' === $value ) {
 			unset( $this->cache[$key] );
@@ -272,8 +269,7 @@ class WP_Object_Cache {
 				$return = array_merge( $return, $vals );
 			}
 		}
-		@ ++$this->stats['get_multi'];
-		$this->group_ops[$group][] = "get_multi $id";
+		$this->maybe_collect_stats( 'get_multi', $group, $id );
 		$this->cache = array_merge( $this->cache, $return );
 		return $return;
 	}
@@ -352,6 +348,13 @@ class WP_Object_Cache {
 		global $table_prefix;
 		$blog_id = (int) $blog_id;
 		$this->blog_prefix = ( is_multisite() ? $blog_id : $table_prefix );
+	}
+
+	private function maybe_collect_stats( $action, $group, $id ) {
+		if ( true === apply_filters( 'object_cache_collect_stats', false ) ) {
+			@ ++ $this->stats[ $action ];
+			$this->group_ops[ $group ][] = "$action $id";
+		}
 	}
 
 	function colorize_debug_line($line) {
